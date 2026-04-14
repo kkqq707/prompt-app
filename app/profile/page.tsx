@@ -11,6 +11,7 @@ interface Profile {
   avatar_url: string | null;
   bio: string | null;
   location: string | null;
+  website: string | null;
 }
 
 export default function ProfilePage() {
@@ -22,6 +23,7 @@ export default function ProfilePage() {
     avatar_url: "",
     bio: "",
     location: "",
+    website: "",
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -41,7 +43,7 @@ export default function ProfilePage() {
         // Fetch profile
         const { data: profileData, error } = await supabase
           .from("profiles")
-          .select("display_name, avatar_url, bio, location")
+          .select("display_name, avatar_url, bio, location, website")
           .eq("id", user.id)
           .single();
 
@@ -56,6 +58,7 @@ export default function ProfilePage() {
             avatar_url: user.user_metadata?.avatar_url || "",
             bio: "",
             location: "",
+            website: "",
           });
         } else {
           // 将数据库中的null值转换为空字符串用于表单显示
@@ -64,6 +67,7 @@ export default function ProfilePage() {
             avatar_url: profileData?.avatar_url || "",
             bio: profileData?.bio || "",
             location: profileData?.location || "",
+            website: profileData?.website || "",
           };
           setProfile(formattedProfile);
         }
@@ -120,15 +124,43 @@ export default function ProfilePage() {
       // 更新本地状态
       setProfile(prev => ({ ...prev, avatar_url: publicUrl }));
 
-      // 自动保存到数据库（不传递updated_at，由数据库触发器自动更新）
-      const { error: updateError } = await supabase
+      // 更安全的头像保存逻辑：先检查profile是否存在
+      // 避免upsert的RLS策略冲突问题
+      const { data: existingProfile, error: checkError } = await supabase
         .from("profiles")
-        .upsert({
-          id: user.id,
-          avatar_url: publicUrl,
-        });
+        .select("id")
+        .eq("id", user.id)
+        .maybeSingle();  // 使用maybeSingle避免"未找到行"的错误
 
-      if (updateError) throw updateError;
+      if (checkError) throw checkError;
+
+      if (existingProfile) {
+        // 已存在profile，使用update更新头像
+        const { error: updateError } = await supabase
+          .from("profiles")
+          .update({ avatar_url: publicUrl })
+          .eq("id", user.id);
+
+        if (updateError) throw updateError;
+      } else {
+        // 不存在profile，创建新的profile记录
+        const { error: insertError } = await supabase
+          .from("profiles")
+          .insert({
+            id: user.id,
+            display_name: profile.display_name ||
+              user.user_metadata?.username ||
+              user.user_metadata?.name ||
+              user.email?.split("@")[0] ||
+              "",
+            avatar_url: publicUrl,
+            bio: profile.bio || null,
+            website: profile.website || null,
+            location: profile.location || null,
+          });
+
+        if (insertError) throw insertError;
+      }
 
       // 更新用户元数据
       await supabase.auth.updateUser({
@@ -173,6 +205,7 @@ export default function ProfilePage() {
           avatar_url: profile.avatar_url || null,
           bio: profile.bio || null,
           location: profile.location || null,
+          website: profile.website || null,
         });
 
       if (error) throw error;
