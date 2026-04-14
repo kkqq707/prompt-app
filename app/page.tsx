@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/server";
 import PromptList from "@/app/components/prompt-list";
-import LogoutButton from "@/app/components/logout-button";
 
 export const dynamic = "force-dynamic";
 
@@ -64,99 +63,124 @@ export default async function HomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-slate-100/50 p-6 text-foreground dark:from-background dark:to-slate-900/50">
-      <div className="mx-auto max-w-7xl space-y-6">
-        <section className="rounded-3xl bg-card border border-border p-8 shadow-lg shadow-primary/5">
-          <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-            <div>
-              <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-                AI Prompt
-              </h1>
-              <p className="mt-3 max-w-2xl text-base leading-7 text-muted">
-                AI提示词库 - 收集高质量AI提示词模板，支持搜索、分类筛选、收藏、付费解锁与会员查看。
-              </p>
-            </div>
+    <div className="min-h-screen bg-surface text-foreground">
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        {/* Hero Section */}
+        <div className="mb-10">
+          <div className="text-center">
+            <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
+              <span className="block">AI Prompt</span>
+              <span className="block bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent mt-2">
+                智能提示词库
+              </span>
+            </h1>
+            <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-muted">
+              专业级AI提示词模板库，助力您的创作、编程、营销与办公效率
+            </p>
 
-            <div className="flex flex-wrap gap-3">
-              {!user ? (
-                <>
-                  <Link
-                    href="/login"
-                    className="rounded-2xl border border-border bg-card px-5 py-2.5 text-sm font-medium transition-all hover:border-primary hover:bg-primary/5 hover:text-primary"
-                  >
-                    登录
-                  </Link>
-
-                  <Link
-                    href="/signup"
-                    className="rounded-2xl bg-gradient-to-r from-primary to-primary-dark px-5 py-2.5 text-sm font-medium text-white shadow-md transition-all hover:shadow-lg hover:shadow-primary/30"
-                  >
-                    注册
-                  </Link>
-
-                  <Link
-                    href="/vip"
-                    className="rounded-2xl border border-border bg-card px-5 py-2.5 text-sm font-medium text-secondary transition-all hover:border-secondary hover:bg-secondary/5 hover:text-secondary"
-                  >
-                    开通权益
-                  </Link>
-                </>
-              ) : (
-                <>
-                  <Link
-                    href="/vip"
-                    className="rounded-2xl border border-border bg-card px-5 py-2.5 text-sm font-medium text-secondary transition-all hover:border-secondary hover:bg-secondary/5 hover:text-secondary"
-                  >
-                    开通权益
-                  </Link>
-
-                  <Link
-                    href="/favorites"
-                    className="rounded-2xl border border-border bg-card px-5 py-2.5 text-sm font-medium transition-all hover:border-primary hover:bg-primary/5 hover:text-primary"
-                  >
-                    我的收藏
-                  </Link>
-
-                  <LogoutButton />
-
-                  {canManage && (
-                    <Link
-                      href="/prompts/new"
-                      className="rounded-2xl bg-gradient-to-r from-primary to-primary-dark px-5 py-2.5 text-sm font-medium text-white shadow-md transition-all hover:shadow-lg hover:shadow-primary/30"
-                    >
-                      新增提示词
-                    </Link>
-                  )}
-                </>
-              )}
+            {/* Stats */}
+            <div className="mt-8 flex flex-wrap justify-center gap-4">
+              <div className="rounded-xl bg-white border border-border px-5 py-3 text-center shadow-sm dark:bg-card">
+                <div className="text-2xl font-bold text-primary">{prompts?.length || 0}</div>
+                <div className="text-sm text-muted">提示词数量</div>
+              </div>
+              <div className="rounded-xl bg-white border border-border px-5 py-3 text-center shadow-sm dark:bg-card">
+                <div className="text-2xl font-bold text-secondary">5+</div>
+                <div className="text-sm text-muted">AI模型支持</div>
+              </div>
+              <div className="rounded-xl bg-white border border-border px-5 py-3 text-center shadow-sm dark:bg-card">
+                <div className="text-2xl font-bold text-accent">6</div>
+                <div className="text-sm text-muted">专业分类</div>
+              </div>
             </div>
           </div>
+        </div>
 
-          {user && (
-            <div className="mt-5 flex flex-wrap gap-3 text-sm text-muted">
-              <span className="rounded-full bg-primary/10 px-4 py-1.5 text-primary">
-                👤 当前用户：{user.email}
-              </span>
-
-              {canAccessPaid ? (
-                <>
-                  <span className="rounded-full bg-gradient-to-r from-green-500 to-emerald-500 px-4 py-1.5 text-white shadow-sm">
-                    🎉 会员有效中
+        {/* User Status & Actions */}
+        {user && (
+          <div className="mb-8 rounded-xl border border-border bg-card p-6 shadow-sm">
+            <div className="flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-center">
+              <div>
+                <h2 className="text-lg font-semibold text-card-foreground">欢迎回来，{user.email?.split('@')[0] || '用户'}</h2>
+                <div className="mt-2 flex flex-wrap gap-3">
+                  <span className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
+                    <span className="h-2 w-2 rounded-full bg-primary"></span>
+                    {user.email}
                   </span>
-                  {membershipEndAt && (
-                    <span className="rounded-full bg-blue-500/10 px-4 py-1.5 text-blue-600 dark:text-blue-400">
-                      ⏰ 到期时间：{formatDateTime(membershipEndAt)}
+
+                  {canAccessPaid ? (
+                    <span className="inline-flex items-center gap-2 rounded-full bg-green-100 px-3 py-1 text-sm font-medium text-green-800 dark:bg-green-900/30 dark:text-green-300">
+                      <span className="h-2 w-2 rounded-full bg-green-500"></span>
+                      会员有效中
+                      {membershipEndAt && (
+                        <span className="text-xs">· 到期: {formatDateTime(membershipEndAt)}</span>
+                      )}
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-2 rounded-full bg-amber-100 px-3 py-1 text-sm font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+                      <span className="h-2 w-2 rounded-full bg-amber-500"></span>
+                      免费用户
                     </span>
                   )}
-                </>
-              ) : (
-                <span className="rounded-full bg-gradient-to-r from-amber-500 to-orange-500 px-4 py-1.5 text-white shadow-sm">
-                  🔒 当前未开通会员
-                </span>
-              )}
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-3">
+                <Link
+                  href="/favorites"
+                  className="inline-flex items-center justify-center rounded-lg border border-border bg-white px-4 py-2.5 text-sm font-medium text-card-foreground shadow-sm transition-all hover:bg-surface hover:shadow focus:outline-none focus:ring-2 focus:ring-primary/20 dark:bg-card"
+                >
+                  <span className="mr-2">❤️</span>
+                  我的收藏
+                </Link>
+
+                {!canAccessPaid && (
+                  <Link
+                    href="/vip"
+                    className="inline-flex items-center justify-center rounded-lg bg-gradient-to-r from-primary to-primary-dark px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  >
+                    <span className="mr-2">🚀</span>
+                    升级会员
+                  </Link>
+                )}
+
+                {canManage && (
+                  <Link
+                    href="/prompts/new"
+                    className="inline-flex items-center justify-center rounded-lg border border-primary bg-primary/5 px-4 py-2.5 text-sm font-medium text-primary shadow-sm transition-all hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  >
+                    <span className="mr-2">+</span>
+                    新增提示词
+                  </Link>
+                )}
+              </div>
             </div>
-          )}
-        </section>
+          </div>
+        )}
+
+        {/* Guest CTA */}
+        {!user && (
+          <div className="mb-8 rounded-xl border border-border bg-gradient-to-r from-primary/5 to-secondary/5 p-8 text-center">
+            <h2 className="text-2xl font-bold text-card-foreground">开始您的AI创作之旅</h2>
+            <p className="mx-auto mt-2 max-w-2xl text-muted">
+              注册账号即可收藏喜欢的提示词，开通会员解锁全部付费内容
+            </p>
+            <div className="mt-6 flex flex-wrap justify-center gap-4">
+              <Link
+                href="/signup"
+                className="inline-flex items-center justify-center rounded-lg bg-gradient-to-r from-primary to-primary-dark px-6 py-3 text-base font-semibold text-white shadow-sm transition-all hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary/20"
+              >
+                免费注册
+              </Link>
+              <Link
+                href="/login"
+                className="inline-flex items-center justify-center rounded-lg border border-border bg-white px-6 py-3 text-base font-medium text-card-foreground shadow-sm transition-all hover:bg-surface focus:outline-none focus:ring-2 focus:ring-primary/20 dark:bg-card"
+              >
+                已有账号登录
+              </Link>
+            </div>
+          </div>
+        )}
 
         <PromptList
           initialData={prompts ?? []}

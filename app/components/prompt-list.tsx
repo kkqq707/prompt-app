@@ -134,174 +134,293 @@ export default function PromptList({
 
   return (
     <>
-      <section className="rounded-3xl bg-card border border-border p-6 shadow-lg shadow-primary/5">
-        <div className="grid gap-4 md:grid-cols-4">
-          <input
-            value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
-            className="rounded-2xl border border-border bg-background px-5 py-3 outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20 md:col-span-2"
-            placeholder="🔍 搜索提示词"
-          />
+      {/* Search & Filter Section */}
+      <div className="mb-8">
+        <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
+          <div className="mb-6">
+            <h2 className="text-lg font-semibold text-card-foreground">筛选提示词</h2>
+            <p className="mt-1 text-sm text-muted">根据您的需求快速找到合适的AI提示词</p>
+          </div>
 
-          <select
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            className="rounded-2xl border border-border bg-background px-5 py-3 outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20"
-          >
-            <option>全部分类</option>
-            <option>写作</option>
-            <option>营销</option>
-            <option>编程</option>
-            <option>办公</option>
-            <option>会议</option>
-            <option>通用</option>
-          </select>
+          <div className="space-y-4 md:space-y-0 md:flex md:items-end md:gap-4">
+            {/* Search Input */}
+            <div className="flex-1">
+              <label className="mb-2 block text-sm font-medium text-card-foreground">
+                关键词搜索
+              </label>
+              <div className="relative">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                  <svg className="h-5 w-5 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
+                <input
+                  value={keyword}
+                  onChange={(e) => setKeyword(e.target.value)}
+                  className="w-full rounded-lg border border-border bg-white py-3 pl-10 pr-4 text-sm text-card-foreground placeholder-muted transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:bg-card"
+                  placeholder="搜索提示词标题、描述、标签..."
+                />
+              </div>
+            </div>
 
-          <select
-            value={model}
-            onChange={(e) => setModel(e.target.value)}
-            className="rounded-2xl border border-border bg-background px-5 py-3 outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20"
-          >
-            <option>全部模型</option>
-            <option>ChatGPT</option>
-            <option>Claude</option>
-            <option>Gemini</option>
-            <option>chatgpt</option>
-          </select>
+            {/* Category Filter */}
+            <div className="flex-1">
+              <label className="mb-2 block text-sm font-medium text-card-foreground">
+                分类
+              </label>
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="w-full rounded-lg border border-border bg-white py-3 px-4 text-sm text-card-foreground transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:bg-card"
+              >
+                <option>全部分类</option>
+                <option>写作</option>
+                <option>营销</option>
+                <option>编程</option>
+                <option>办公</option>
+                <option>会议</option>
+                <option>通用</option>
+              </select>
+            </div>
+
+            {/* Model Filter */}
+            <div className="flex-1">
+              <label className="mb-2 block text-sm font-medium text-card-foreground">
+                AI模型
+              </label>
+              <select
+                value={model}
+                onChange={(e) => setModel(e.target.value)}
+                className="w-full rounded-lg border border-border bg-white py-3 px-4 text-sm text-card-foreground transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:bg-card"
+              >
+                <option>全部模型</option>
+                <option>ChatGPT</option>
+                <option>Claude</option>
+                <option>Gemini</option>
+                <option>chatgpt</option>
+              </select>
+            </div>
+
+            {/* Reset Button */}
+            <div className="pt-2">
+              <button
+                onClick={() => {
+                  setKeyword("");
+                  setCategory("全部分类");
+                  setModel("全部模型");
+                }}
+                className="w-full rounded-lg border border-border bg-white py-3 px-4 text-sm font-medium text-card-foreground transition-all hover:bg-surface focus:outline-none focus:ring-2 focus:ring-primary/20 dark:bg-card md:w-auto"
+              >
+                重置筛选
+              </button>
+            </div>
+          </div>
+
+          {/* Results Count */}
+          <div className="mt-6 flex items-center justify-between border-t border-border pt-6">
+            <div className="text-sm text-muted">
+              找到 <span className="font-semibold text-primary">{filteredPrompts.length}</span> 条提示词
+            </div>
+            <div className="text-xs text-muted">
+              共 <span className="font-medium">{data.length}</span> 条
+            </div>
+          </div>
         </div>
+      </div>
 
-        <p className="mt-4 text-sm text-muted">
-          共找到 <span className="font-semibold text-primary">{filteredPrompts.length}</span> 条提示词
-        </p>
-      </section>
+      {/* Prompts Grid */}
+      {filteredPrompts.length > 0 ? (
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {filteredPrompts.map((item) => {
+            const isLocked = item.is_paid && !canAccessPaid;
 
-      <section className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-        {filteredPrompts.map((item) => {
-          const isLocked = item.is_paid && !canAccessPaid;
+            return (
+              <article
+                key={item.id}
+                className="group flex flex-col rounded-xl border border-border bg-card p-5 shadow-sm transition-all hover:shadow-md hover:-translate-y-1"
+              >
+                {/* Card Header */}
+                <div className="mb-4 flex items-start justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="rounded-md bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+                      {item.category}
+                    </span>
+                    <span className="rounded-md bg-secondary/10 px-2.5 py-1 text-xs font-medium text-secondary">
+                      {item.model}
+                    </span>
+                  </div>
 
-          return (
-            <article
-              key={item.id}
-              className="group rounded-3xl bg-card border border-border p-6 shadow-md transition-all hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1"
+                  {item.is_paid && (
+                    <span className="rounded-full bg-gradient-to-r from-amber-500 to-orange-500 px-3 py-1 text-xs font-semibold text-white">
+                      💎 付费
+                    </span>
+                  )}
+                </div>
+
+                {/* Card Content */}
+                <div className="mb-4 flex-1">
+                  <h3 className="mb-2 text-lg font-semibold text-card-foreground line-clamp-2">
+                    {item.title}
+                  </h3>
+                  <p className="mb-4 text-sm text-muted line-clamp-2">
+                    {item.description}
+                  </p>
+
+                  {/* Tags */}
+                  {item.tags && item.tags.length > 0 && (
+                    <div className="mb-4 flex flex-wrap gap-1.5">
+                      {item.tags.map((tag) => (
+                        <span
+                          key={tag}
+                          className="rounded-full bg-surface px-2.5 py-1 text-xs text-muted border border-border"
+                        >
+                          #{tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Prompt Preview */}
+                  <div className="rounded-lg bg-surface border border-border p-4">
+                    <div className="relative">
+                      <pre className="whitespace-pre-wrap break-words font-sans text-sm text-card-foreground line-clamp-3">
+                        {isLocked
+                          ? (item.prompt?.slice(0, 120) ?? "") +
+                            "\n\n🔒 付费内容，开通会员或单独解锁后可查看完整提示词"
+                          : item.prompt?.slice(0, 180)}
+                      </pre>
+                      {isLocked && (
+                        <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-white/80 backdrop-blur-sm dark:bg-card/80">
+                          <div className="text-center">
+                            <div className="mb-2 text-2xl">🔒</div>
+                            <div className="text-sm font-medium text-card-foreground">付费内容已隐藏</div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Card Footer - Actions */}
+                <div className="mt-auto pt-4 border-t border-border">
+                  <div className="flex flex-wrap gap-2">
+                    {/* Favorite Button */}
+                    {showFavoriteButton && (
+                      <button
+                        onClick={() => handleToggleFavorite(item.id)}
+                        disabled={togglingFavoriteId === item.id}
+                        className="inline-flex items-center justify-center rounded-lg border border-border bg-white px-3 py-2 text-sm font-medium text-card-foreground transition-all hover:bg-surface hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-60 dark:bg-card"
+                      >
+                        {togglingFavoriteId === item.id ? (
+                          <>
+                            <span className="loading-spinner mr-1.5 h-3 w-3"></span>
+                            处理中
+                          </>
+                        ) : favoriteIds.includes(item.id) ? (
+                          <>
+                            <span className="mr-1.5 text-red-500">❤️</span>
+                            已收藏
+                          </>
+                        ) : (
+                          <>
+                            <span className="mr-1.5">🤍</span>
+                            收藏
+                          </>
+                        )}
+                      </button>
+                    )}
+
+                    {/* Action Buttons */}
+                    {isLocked ? (
+                      <>
+                        <button
+                          onClick={() => handlePaidAction(item.id)}
+                          className="inline-flex items-center justify-center rounded-lg bg-gradient-to-r from-primary to-primary-dark px-3 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary/20"
+                        >
+                          🔓 解锁
+                        </button>
+                        <button
+                          onClick={() => handlePaidAction(item.id)}
+                          className="inline-flex items-center justify-center rounded-lg border border-primary bg-primary/5 px-3 py-2 text-sm font-medium text-primary transition-all hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary/20"
+                        >
+                          💎 会员
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(item.prompt);
+                            alert("已复制提示词");
+                          }}
+                          className="inline-flex items-center justify-center rounded-lg bg-gradient-to-r from-primary to-primary-dark px-3 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary/20"
+                        >
+                          📋 复制
+                        </button>
+                        <Link
+                          href={`/prompts/${item.id}`}
+                          className="inline-flex items-center justify-center rounded-lg border border-border bg-white px-3 py-2 text-sm font-medium text-card-foreground transition-all hover:bg-surface hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 dark:bg-card"
+                        >
+                          🔍 详情
+                        </Link>
+                      </>
+                    )}
+
+                    {/* Admin Actions */}
+                    {canManage && (
+                      <>
+                        <Link
+                          href={`/prompts/${item.id}/edit`}
+                          className="inline-flex items-center justify-center rounded-lg border border-border bg-white px-3 py-2 text-sm font-medium text-card-foreground transition-all hover:bg-surface hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 dark:bg-card"
+                        >
+                          ✏️ 编辑
+                        </Link>
+                        <button
+                          onClick={() => handleDelete(item.id)}
+                          disabled={deletingId === item.id}
+                          className="inline-flex items-center justify-center rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-600 transition-all hover:bg-red-100 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500/20 disabled:opacity-60 dark:border-red-800 dark:bg-red-900/30 dark:text-red-300"
+                        >
+                          {deletingId === item.id ? (
+                            <>
+                              <span className="loading-spinner mr-1.5 h-3 w-3 border-red-600"></span>
+                              删除中
+                            </>
+                          ) : (
+                            "🗑️ 删除"
+                          )}
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      ) : (
+        /* Empty State */
+        <div className="rounded-xl border border-dashed border-border bg-surface p-12 text-center">
+          <div className="mx-auto max-w-md">
+            <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
+              <span className="text-2xl">🔍</span>
+            </div>
+            <h3 className="mb-2 text-lg font-semibold text-card-foreground">未找到匹配的提示词</h3>
+            <p className="mb-6 text-sm text-muted">
+              尝试调整搜索关键词或筛选条件，或浏览全部提示词
+            </p>
+            <button
+              onClick={() => {
+                setKeyword("");
+                setCategory("全部分类");
+                setModel("全部模型");
+              }}
+              className="inline-flex items-center justify-center rounded-lg border border-border bg-white px-5 py-2.5 text-sm font-medium text-card-foreground transition-all hover:bg-surface hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 dark:bg-card"
             >
-              <div className="text-xs font-medium text-muted">
-                <span className="rounded-full bg-primary/10 px-2.5 py-1 text-primary">
-                  {item.category}
-                </span>
-                <span className="mx-2">·</span>
-                <span className="rounded-full bg-secondary/10 px-2.5 py-1 text-secondary">
-                  {item.model}
-                </span>
-              </div>
-
-              <h2 className="mt-3 text-xl font-semibold text-card-foreground">
-                {item.title}
-                {item.is_paid && (
-                  <span className="ml-2 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 px-3 py-1 text-xs font-semibold text-white">
-                    💎 付费
-                  </span>
-                )}
-              </h2>
-
-              <p className="mt-3 text-sm leading-7 text-muted line-clamp-2">
-                {item.description}
-              </p>
-
-              <div className="mt-4 flex flex-wrap gap-2">
-                {item.tags?.map((tag) => (
-                  <span
-                    key={tag}
-                    className="rounded-full bg-primary/5 border border-primary/10 px-3 py-1 text-xs text-primary"
-                  >
-                    #{tag}
-                  </span>
-                ))}
-              </div>
-
-              <div className="mt-4 rounded-2xl bg-gradient-to-br from-background to-slate-100/50 border border-border p-5">
-                <pre className="whitespace-pre-wrap font-sans text-sm leading-7 text-card-foreground">
-                  {isLocked
-                    ? (item.prompt?.slice(0, 100) ?? "") +
-                      "\n\n🔒 付费内容，开通会员或 0.99 解锁本条后可查看完整提示词"
-                    : item.prompt}
-                </pre>
-              </div>
-
-              <div className="mt-4 flex flex-wrap gap-3">
-                {showFavoriteButton && (
-                  <button
-                    onClick={() => handleToggleFavorite(item.id)}
-                    disabled={togglingFavoriteId === item.id}
-                    className="rounded-2xl border border-border bg-card px-5 py-2.5 text-sm font-medium transition-all hover:border-primary hover:bg-primary/5 hover:text-primary disabled:opacity-60"
-                  >
-                    {togglingFavoriteId === item.id
-                      ? "⏳ 处理中..."
-                      : favoriteIds.includes(item.id)
-                      ? "❤️ 取消收藏"
-                      : "🤍 收藏"}
-                  </button>
-                )}
-
-                {isLocked ? (
-                  <>
-                    <button
-                      onClick={() => handlePaidAction(item.id)}
-                      className="rounded-2xl bg-gradient-to-r from-primary to-primary-dark px-5 py-2.5 text-sm font-medium text-white shadow-md transition-all hover:shadow-lg hover:shadow-primary/30"
-                    >
-                      🔓 解锁查看
-                    </button>
-
-                    <button
-                      onClick={() => handlePaidAction(item.id)}
-                      className="rounded-2xl border border-border bg-card px-5 py-2.5 text-sm font-medium text-secondary transition-all hover:border-secondary hover:bg-secondary/5 hover:text-secondary"
-                    >
-                      💎 开通会员
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button
-                      onClick={() => {
-                        navigator.clipboard.writeText(item.prompt);
-                        alert("已复制提示词");
-                      }}
-                      className="rounded-2xl bg-gradient-to-r from-primary to-primary-dark px-5 py-2.5 text-sm font-medium text-white shadow-md transition-all hover:shadow-lg hover:shadow-primary/30"
-                    >
-                      📋 复制提示词
-                    </button>
-
-                    <Link
-                      href={`/prompts/${item.id}`}
-                      className="rounded-2xl border border-border bg-card px-5 py-2.5 text-sm font-medium transition-all hover:border-primary hover:bg-primary/5 hover:text-primary"
-                    >
-                      🔍 查看详情
-                    </Link>
-                  </>
-                )}
-
-                {canManage && (
-                  <>
-                    <Link
-                      href={`/prompts/${item.id}/edit`}
-                      className="rounded-2xl border border-border bg-card px-5 py-2.5 text-sm font-medium transition-all hover:border-primary hover:bg-primary/5 hover:text-primary"
-                    >
-                      ✏️ 编辑
-                    </Link>
-
-                    <button
-                      onClick={() => handleDelete(item.id)}
-                      disabled={deletingId === item.id}
-                      className="rounded-2xl border border-red-300 bg-red-50 px-5 py-2.5 text-sm font-medium text-red-600 transition-all hover:border-red-500 hover:bg-red-100 disabled:opacity-60"
-                    >
-                      {deletingId === item.id ? "⏳ 删除中..." : "🗑️ 删除"}
-                    </button>
-                  </>
-                )}
-              </div>
-            </article>
-          );
-        })}
-      </section>
+              重置所有筛选
+            </button>
+          </div>
+        </div>
+      )}
     </>
   );
 }

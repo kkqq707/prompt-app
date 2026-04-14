@@ -10,7 +10,6 @@ interface Profile {
   display_name: string | null;
   avatar_url: string | null;
   bio: string | null;
-  website: string | null;
   location: string | null;
 }
 
@@ -22,11 +21,11 @@ export default function ProfilePage() {
     display_name: "",
     avatar_url: "",
     bio: "",
-    website: "",
     location: "",
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   useEffect(() => {
@@ -42,7 +41,7 @@ export default function ProfilePage() {
         // Fetch profile
         const { data: profileData, error } = await supabase
           .from("profiles")
-          .select("display_name, avatar_url, bio, website, location")
+          .select("display_name, avatar_url, bio, location")
           .eq("id", user.id)
           .single();
 
@@ -56,7 +55,6 @@ export default function ProfilePage() {
               "",
             avatar_url: user.user_metadata?.avatar_url || "",
             bio: "",
-            website: "",
             location: "",
           });
         } else {
@@ -64,7 +62,6 @@ export default function ProfilePage() {
             display_name: "",
             avatar_url: "",
             bio: "",
-            website: "",
             location: "",
           });
         }
@@ -77,6 +74,77 @@ export default function ProfilePage() {
 
     fetchUserAndProfile();
   }, [supabase, router]);
+
+  async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    // 检查文件类型
+    if (!file.type.startsWith("image/")) {
+      setMessage({ type: "error", text: "请选择图片文件（JPEG、PNG等）" });
+      return;
+    }
+
+    // 检查文件大小（限制为5MB）
+    if (file.size > 5 * 1024 * 1024) {
+      setMessage({ type: "error", text: "图片大小不能超过5MB" });
+      return;
+    }
+
+    setUploading(true);
+    setMessage(null);
+
+    try {
+      // 生成唯一文件名
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+      const filePath = `avatars/${fileName}`;
+
+      // 上传文件到Supabase存储
+      const { error: uploadError, data } = await supabase.storage
+        .from("public")
+        .upload(filePath, file, {
+          cacheControl: "3600",
+          upsert: true,
+        });
+
+      if (uploadError) throw uploadError;
+
+      // 获取公共URL
+      const { data: { publicUrl } } = supabase.storage
+        .from("public")
+        .getPublicUrl(filePath);
+
+      // 更新本地状态
+      setProfile(prev => ({ ...prev, avatar_url: publicUrl }));
+
+      // 自动保存到数据库
+      const { error: updateError } = await supabase
+        .from("profiles")
+        .upsert({
+          id: user.id,
+          avatar_url: publicUrl,
+          updated_at: new Date().toISOString(),
+        });
+
+      if (updateError) throw updateError;
+
+      // 更新用户元数据
+      await supabase.auth.updateUser({
+        data: { avatar_url: publicUrl }
+      });
+
+      setMessage({ type: "success", text: "头像上传成功！" });
+      router.refresh(); // 刷新页面以更新用户菜单
+    } catch (error: any) {
+      console.error("Error uploading avatar:", error);
+      setMessage({ type: "error", text: `头像上传失败：${error.message}` });
+    } finally {
+      setUploading(false);
+      // 清空文件输入，允许选择相同文件再次上传
+      e.target.value = "";
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -94,7 +162,6 @@ export default function ProfilePage() {
           display_name: profile.display_name || null,
           avatar_url: profile.avatar_url || null,
           bio: profile.bio || null,
-          website: profile.website || null,
           location: profile.location || null,
           updated_at: new Date().toISOString(),
         });
@@ -131,9 +198,9 @@ export default function ProfilePage() {
     return (
       <div className="min-h-screen bg-gradient-to-b from-background to-primary/5 p-6">
         <div className="mx-auto max-w-2xl">
-          <div className="rounded-3xl bg-card border border-border p-8 shadow-lg shadow-primary/10">
+          <div className="rounded-xl border border-border bg-card p-8 shadow-sm">
             <div className="flex items-center justify-center py-12">
-              <div className="loading-spinner h-8 w-8 border-3 border-primary"></div>
+              <div className="loading-spinner h-8 w-8 border-2 border-primary"></div>
             </div>
           </div>
         </div>
@@ -142,58 +209,82 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-primary/5 p-4 sm:p-6">
+    <div className="min-h-screen bg-surface p-4 sm:p-6">
       <div className="mx-auto max-w-2xl space-y-8">
         {/* Header */}
         <div className="flex flex-wrap items-center justify-between gap-4">
           <Link
             href="/"
-            className="group inline-flex items-center gap-2 rounded-2xl border border-border bg-card px-5 py-3 text-sm font-medium transition-all hover:border-primary hover:bg-primary/5 hover:text-primary hover:shadow-md"
+            className="group inline-flex items-center gap-2 rounded-lg border border-border bg-white px-4 py-2.5 text-sm font-medium text-card-foreground transition-all hover:bg-surface hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 dark:bg-card"
           >
             <span className="transition-transform group-hover:-translate-x-0.5">←</span>
             返回首页
           </Link>
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-            编辑资料
+          <h1 className="text-xl font-semibold text-card-foreground sm:text-2xl">
+            编辑个人资料
           </h1>
         </div>
 
         {/* Profile Form */}
-        <div className="rounded-3xl bg-card border border-border p-6 sm:p-8 shadow-2xl shadow-primary/10">
+        <div className="rounded-xl border border-border bg-card p-6 shadow-sm sm:p-8">
           {/* Avatar Preview */}
           <div className="mb-8 flex flex-col items-center">
-            <div className="relative h-32 w-32">
-              {profile.avatar_url ? (
-                <img
-                  src={profile.avatar_url}
-                  alt="头像"
-                  className="h-full w-full rounded-full object-cover border-4 border-primary/20 shadow-lg"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.style.display = "none";
-                    const parent = target.parentElement;
-                    if (parent) {
-                      const fallback = document.createElement("div");
-                      fallback.className = "h-full w-full rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-white font-bold text-2xl";
-                      fallback.textContent = (profile.display_name || "用户").charAt(0).toUpperCase();
-                      parent.appendChild(fallback);
-                    }
-                  }}
-                />
-              ) : (
-                <div className="h-full w-full rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-lg">
-                  <span className="text-white font-bold text-2xl">
-                    {(profile.display_name || "用户").charAt(0).toUpperCase()}
-                  </span>
-                </div>
-              )}
-            </div>
-            <p className="mt-4 text-sm text-muted">头像预览</p>
+            <input
+              type="file"
+              id="avatar-upload"
+              accept="image/*"
+              className="hidden"
+              onChange={handleAvatarUpload}
+              disabled={uploading}
+            />
+            <label htmlFor="avatar-upload" className="cursor-pointer group">
+              <div className="relative h-32 w-32">
+                {profile.avatar_url ? (
+                  <>
+                    <img
+                      src={profile.avatar_url}
+                      alt="头像"
+                      className="h-full w-full rounded-full object-cover border-4 border-primary/20 shadow-lg group-hover:opacity-90 transition-opacity"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = "none";
+                        const parent = target.parentElement;
+                        if (parent) {
+                          const fallback = document.createElement("div");
+                          fallback.className = "h-full w-full rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-white font-bold text-2xl";
+                          fallback.textContent = (profile.display_name || "用户").charAt(0).toUpperCase();
+                          parent.appendChild(fallback);
+                        }
+                      }}
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <span className="text-white font-bold text-sm bg-black/60 rounded-full p-2">
+                        {uploading ? "上传中..." : "更换头像"}
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="h-full w-full rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-lg group-hover:opacity-90 transition-opacity">
+                    <div className="text-center">
+                      <span className="text-white font-bold text-2xl block">
+                        {(profile.display_name || "用户").charAt(0).toUpperCase()}
+                      </span>
+                      <span className="text-white/80 text-xs mt-1 block">
+                        {uploading ? "上传中..." : "点击上传"}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </label>
+            <p className="mt-4 text-sm text-muted">
+              {uploading ? "头像上传中..." : "点击头像上传或更换"}
+            </p>
           </div>
 
           {/* Message Alert */}
           {message && (
-            <div className={`mb-6 rounded-2xl p-4 ${message.type === "success" ? "bg-green-50 border border-green-200 text-green-800" : "bg-red-50 border border-red-200 text-red-800"}`}>
+            <div className={`mb-6 rounded-lg p-4 ${message.type === "success" ? "bg-green-50 border border-green-200 text-green-800" : "bg-red-50 border border-red-200 text-red-800"}`}>
               <div className="flex items-center gap-2">
                 <span className="text-lg">{message.type === "success" ? "✅" : "❌"}</span>
                 <span className="text-sm font-medium">{message.text}</span>
@@ -214,27 +305,12 @@ export default function ProfilePage() {
                 value={profile.display_name || ""}
                 onChange={handleInputChange}
                 placeholder="请输入昵称"
-                className="w-full rounded-2xl border border-border bg-background px-5 py-3.5 outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20"
+                className="w-full rounded-lg border border-border bg-white dark:bg-card px-5 py-3.5 outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20"
                 maxLength={30}
               />
               <p className="text-xs text-muted">昵称将显示在您的个人资料和评论中</p>
             </div>
 
-            {/* Avatar URL */}
-            <div className="space-y-3">
-              <label className="text-sm font-semibold text-card-foreground">
-                头像链接
-              </label>
-              <input
-                type="url"
-                name="avatar_url"
-                value={profile.avatar_url || ""}
-                onChange={handleInputChange}
-                placeholder="https://example.com/avatar.jpg"
-                className="w-full rounded-2xl border border-border bg-background px-5 py-3.5 outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20"
-              />
-              <p className="text-xs text-muted">支持 Gravatar、QQ 头像等第三方头像服务链接</p>
-            </div>
 
             {/* Bio */}
             <div className="space-y-3">
@@ -247,26 +323,12 @@ export default function ProfilePage() {
                 onChange={handleInputChange}
                 placeholder="介绍一下你自己..."
                 rows={3}
-                className="w-full rounded-2xl border border-border bg-background px-5 py-3.5 outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20 resize-none"
+                className="w-full rounded-lg border border-border bg-white dark:bg-card px-5 py-3.5 outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20 resize-none"
                 maxLength={200}
               />
               <p className="text-xs text-muted">最多 200 字</p>
             </div>
 
-            {/* Website */}
-            <div className="space-y-3">
-              <label className="text-sm font-semibold text-card-foreground">
-                个人网站
-              </label>
-              <input
-                type="url"
-                name="website"
-                value={profile.website || ""}
-                onChange={handleInputChange}
-                placeholder="https://example.com"
-                className="w-full rounded-2xl border border-border bg-background px-5 py-3.5 outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20"
-              />
-            </div>
 
             {/* Location */}
             <div className="space-y-3">
@@ -279,7 +341,7 @@ export default function ProfilePage() {
                 value={profile.location || ""}
                 onChange={handleInputChange}
                 placeholder="例如：北京、上海"
-                className="w-full rounded-2xl border border-border bg-background px-5 py-3.5 outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20"
+                className="w-full rounded-lg border border-border bg-white dark:bg-card px-5 py-3.5 outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20"
               />
             </div>
 
@@ -292,7 +354,7 @@ export default function ProfilePage() {
                 type="email"
                 value={user?.email || ""}
                 disabled
-                className="w-full rounded-2xl border border-border bg-muted/30 px-5 py-3.5 text-muted cursor-not-allowed"
+                className="w-full rounded-lg border border-border bg-surface px-4 py-3 text-muted cursor-not-allowed"
               />
               <p className="text-xs text-muted">邮箱不可修改</p>
             </div>
@@ -302,7 +364,7 @@ export default function ProfilePage() {
               <button
                 type="submit"
                 disabled={saving}
-                className="rounded-2xl bg-gradient-to-r from-primary to-primary-dark px-8 py-3.5 text-sm font-semibold text-white shadow-md transition-all hover:shadow-lg hover:shadow-primary/30 disabled:opacity-60"
+                className="rounded-lg bg-gradient-to-r from-primary to-primary-dark px-6 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-60"
               >
                 {saving ? (
                   <span className="flex items-center justify-center gap-2">
@@ -314,14 +376,14 @@ export default function ProfilePage() {
 
               <Link
                 href="/change-password"
-                className="rounded-2xl border border-border bg-card px-8 py-3.5 text-sm font-medium transition-all hover:border-primary hover:bg-primary/5 hover:text-primary"
+                className="rounded-lg border border-border bg-white px-6 py-3 text-sm font-medium text-card-foreground transition-all hover:bg-surface hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 dark:bg-card"
               >
                 修改密码
               </Link>
 
               <Link
                 href="/"
-                className="rounded-2xl border border-border bg-card px-8 py-3.5 text-sm font-medium transition-all hover:border-border hover:bg-background"
+                className="rounded-lg border border-border bg-white px-6 py-3 text-sm font-medium text-card-foreground transition-all hover:bg-surface hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 dark:bg-card"
               >
                 取消
               </Link>
@@ -329,7 +391,7 @@ export default function ProfilePage() {
           </form>
 
           {/* Tips */}
-          <div className="mt-8 rounded-2xl bg-gradient-to-r from-background to-primary/5 border border-primary/20 p-5">
+          <div className="mt-8 rounded-xl border border-border bg-surface p-5">
             <div className="flex items-start gap-3">
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10">
                 <span className="text-sm">💡</span>
@@ -338,7 +400,7 @@ export default function ProfilePage() {
                 <h4 className="text-sm font-semibold text-card-foreground">温馨提示</h4>
                 <ul className="space-y-1 text-xs text-muted">
                   <li>• 昵称和头像将显示在您的个人资料中</li>
-                  <li>• 个人网站和所在地信息可选填</li>
+                  <li>• 所在地信息可选填</li>
                   <li>• 修改密码请点击上方"修改密码"按钮</li>
                 </ul>
               </div>
