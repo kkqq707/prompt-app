@@ -102,7 +102,7 @@ export default function ProfilePage() {
 
       // 上传文件到Supabase存储
       const { error: uploadError, data } = await supabase.storage
-        .from("public")
+        .from("avatars")
         .upload(filePath, file, {
           cacheControl: "3600",
           upsert: true,
@@ -112,7 +112,7 @@ export default function ProfilePage() {
 
       // 获取公共URL
       const { data: { publicUrl } } = supabase.storage
-        .from("public")
+        .from("avatars")
         .getPublicUrl(filePath);
 
       // 更新本地状态
@@ -138,7 +138,16 @@ export default function ProfilePage() {
       router.refresh(); // 刷新页面以更新用户菜单
     } catch (error: any) {
       console.error("Error uploading avatar:", error);
-      setMessage({ type: "error", text: `头像上传失败：${error.message}` });
+      let errorMessage = error.message;
+
+      // 提供更详细的错误信息
+      if (error.message.includes("Bucket not found")) {
+        errorMessage = "存储桶不存在。请在Supabase控制台中创建名为 'avatars' 的存储桶，并设置公共访问权限。";
+      } else if (error.message.includes("display_name") || error.message.includes("schema cache")) {
+        errorMessage = "数据库表结构问题。请确保已运行数据库迁移：执行 migrations/001_create_profiles_table.sql 中的SQL语句。";
+      }
+
+      setMessage({ type: "error", text: `头像上传失败：${errorMessage}` });
     } finally {
       setUploading(false);
       // 清空文件输入，允许选择相同文件再次上传
@@ -183,7 +192,16 @@ export default function ProfilePage() {
       router.refresh(); // Refresh to update user menu
     } catch (error: any) {
       console.error("Error updating profile:", error);
-      setMessage({ type: "error", text: `更新失败：${error.message}` });
+      let errorMessage = error.message;
+
+      // 提供更详细的错误信息
+      if (error.message.includes("display_name") || error.message.includes("schema cache") || error.message.includes("column")) {
+        errorMessage = "数据库表结构问题。请确保已运行数据库迁移：执行 migrations/001_create_profiles_table.sql 中的SQL语句到Supabase数据库。";
+      } else if (error.message.includes("profiles")) {
+        errorMessage = "profiles表问题。请检查数据库表是否存在，或运行迁移脚本。";
+      }
+
+      setMessage({ type: "error", text: `更新失败：${errorMessage}` });
     } finally {
       setSaving(false);
     }
