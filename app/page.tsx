@@ -1,65 +1,172 @@
-import Image from "next/image";
+import Link from "next/link";
+import { createClient } from "@/utils/supabase/server";
+import PromptList from "@/app/components/prompt-list";
+import LogoutButton from "@/app/components/logout-button";
 
-export default function Home() {
+export const dynamic = "force-dynamic";
+
+function formatDateTime(value: string) {
+  const date = new Date(value);
+  return date.toLocaleString("zh-CN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+export default async function HomePage() {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const { data: prompts } = await supabase
+    .from("prompts")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  let favoriteIds: string[] = [];
+  let canAccessPaid = false;
+  let membershipEndAt: string | null = null;
+
+  if (user) {
+    const [{ data: favorites }, { data: membership }] = await Promise.all([
+      supabase
+        .from("favorites")
+        .select("prompt_id")
+        .eq("user_id", user.id),
+
+      supabase
+        .from("user_memberships")
+        .select("id, end_at")
+        .eq("user_id", user.id)
+        .gt("end_at", new Date().toISOString())
+        .order("end_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+    ]);
+
+    favoriteIds = favorites?.map((item) => item.prompt_id) ?? [];
+    canAccessPaid = !!membership;
+    membershipEndAt = membership?.end_at ?? null;
+  }
+
+  const adminEmails = ["399569499@qq.com"];
+  const canManage = !!user && adminEmails.includes(user.email ?? "");
+
+  // 管理员账户自动拥有永久会员
+  if (user && adminEmails.includes(user.email ?? "")) {
+    canAccessPaid = true;
+    membershipEndAt = new Date(Date.now() + 100 * 365 * 24 * 60 * 60 * 1000).toISOString(); // 100年后
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <div className="min-h-screen bg-gradient-to-b from-background to-slate-100/50 p-6 text-foreground dark:from-background dark:to-slate-900/50">
+      <div className="mx-auto max-w-7xl space-y-6">
+        <section className="rounded-3xl bg-card border border-border p-8 shadow-lg shadow-primary/5">
+          <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+            <div>
+              <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+                AI Prompt
+              </h1>
+              <p className="mt-3 max-w-2xl text-base leading-7 text-muted">
+                AI提示词库 - 收集高质量AI提示词模板，支持搜索、分类筛选、收藏、付费解锁与会员查看。
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-3">
+              {!user ? (
+                <>
+                  <Link
+                    href="/login"
+                    className="rounded-2xl border border-border bg-card px-5 py-2.5 text-sm font-medium transition-all hover:border-primary hover:bg-primary/5 hover:text-primary"
+                  >
+                    登录
+                  </Link>
+
+                  <Link
+                    href="/signup"
+                    className="rounded-2xl bg-gradient-to-r from-primary to-primary-dark px-5 py-2.5 text-sm font-medium text-white shadow-md transition-all hover:shadow-lg hover:shadow-primary/30"
+                  >
+                    注册
+                  </Link>
+
+                  <Link
+                    href="/vip"
+                    className="rounded-2xl border border-border bg-card px-5 py-2.5 text-sm font-medium text-secondary transition-all hover:border-secondary hover:bg-secondary/5 hover:text-secondary"
+                  >
+                    开通权益
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Link
+                    href="/vip"
+                    className="rounded-2xl border border-border bg-card px-5 py-2.5 text-sm font-medium text-secondary transition-all hover:border-secondary hover:bg-secondary/5 hover:text-secondary"
+                  >
+                    开通权益
+                  </Link>
+
+                  <Link
+                    href="/favorites"
+                    className="rounded-2xl border border-border bg-card px-5 py-2.5 text-sm font-medium transition-all hover:border-primary hover:bg-primary/5 hover:text-primary"
+                  >
+                    我的收藏
+                  </Link>
+
+                  <LogoutButton />
+
+                  {canManage && (
+                    <Link
+                      href="/prompts/new"
+                      className="rounded-2xl bg-gradient-to-r from-primary to-primary-dark px-5 py-2.5 text-sm font-medium text-white shadow-md transition-all hover:shadow-lg hover:shadow-primary/30"
+                    >
+                      新增提示词
+                    </Link>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+
+          {user && (
+            <div className="mt-5 flex flex-wrap gap-3 text-sm text-muted">
+              <span className="rounded-full bg-primary/10 px-4 py-1.5 text-primary">
+                👤 当前用户：{user.email}
+              </span>
+
+              {canAccessPaid ? (
+                <>
+                  <span className="rounded-full bg-gradient-to-r from-green-500 to-emerald-500 px-4 py-1.5 text-white shadow-sm">
+                    🎉 会员有效中
+                  </span>
+                  {membershipEndAt && (
+                    <span className="rounded-full bg-blue-500/10 px-4 py-1.5 text-blue-600 dark:text-blue-400">
+                      ⏰ 到期时间：{formatDateTime(membershipEndAt)}
+                    </span>
+                  )}
+                </>
+              ) : (
+                <span className="rounded-full bg-gradient-to-r from-amber-500 to-orange-500 px-4 py-1.5 text-white shadow-sm">
+                  🔒 当前未开通会员
+                </span>
+              )}
+            </div>
+          )}
+        </section>
+
+        <PromptList
+          initialData={prompts ?? []}
+          canManage={canManage}
+          initialFavoriteIds={favoriteIds}
+          showFavoriteButton={!!user}
+          canAccessPaid={canAccessPaid}
+          isLoggedIn={!!user}
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+      </div>
     </div>
   );
 }
