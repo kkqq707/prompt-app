@@ -12,9 +12,12 @@ export default function VipLockedButton({
   return (
     <button
       onClick={handleClick}
-      className="rounded-2xl bg-slate-300 px-4 py-2 text-sm font-medium text-white"
+      className="rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 px-5 py-2.5 text-sm font-semibold text-white shadow-md transition-all hover:shadow-lg hover:shadow-amber-500/30"
     >
-      {text}
+      <span className="flex items-center justify-center gap-2">
+        <span>👑</span>
+        {text}
+      </span>
     </button>
   );
 }

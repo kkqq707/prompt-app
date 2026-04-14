@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { createClient } from "@/utils/supabase/client";
+import { getAuthErrorMessage } from "@/utils/auth-errors";
 
 export default function LoginPage() {
   const supabase = createClient();
@@ -12,9 +13,11 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
+    setError(null);
     setLoading(true);
 
     const { error } = await supabase.auth.signInWithPassword({
@@ -25,11 +28,10 @@ export default function LoginPage() {
     setLoading(false);
 
     if (error) {
-      alert("登录失败：" + error.message);
+      setError(getAuthErrorMessage(error));
       return;
     }
 
-    alert("登录成功");
     router.push("/");
     router.refresh();
   }
@@ -42,6 +44,18 @@ export default function LoginPage() {
           登录后可收藏提示词、购买单条内容或开通会员。
         </p>
 
+        {error && (
+          <div className="mb-6 rounded-2xl border border-red-300 bg-red-50 p-4 text-red-800 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300">
+            <div className="flex items-center">
+              <svg className="mr-2 h-5 w-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+              <span className="font-medium">登录失败</span>
+            </div>
+            <p className="mt-2 text-sm">{error}</p>
+          </div>
+        )}
+
         <form onSubmit={handleLogin} className="mt-6 space-y-5">
           <div className="space-y-2">
             <label className="text-sm font-semibold text-card-foreground">
@@ -50,7 +64,7 @@ export default function LoginPage() {
             <input
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => { setEmail(e.target.value); setError(null); }}
               placeholder="请输入邮箱"
               className="mt-2 w-full rounded-2xl border border-border bg-background px-5 py-3.5 outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20"
               required
@@ -64,7 +78,7 @@ export default function LoginPage() {
             <input
               type="password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => { setPassword(e.target.value); setError(null); }}
               placeholder="请输入密码"
               className="mt-2 w-full rounded-2xl border border-border bg-background px-5 py-3.5 outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20"
               required
