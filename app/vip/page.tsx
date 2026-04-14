@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
+
+export const dynamic = "force-dynamic";
 
 type PlanType = "single" | "month" | "half_year" | "year";
 
@@ -22,7 +24,7 @@ function formatDateTime(value: string) {
   });
 }
 
-export default function VipPage() {
+function VipContent() {
   const supabase = createClient();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -322,5 +324,13 @@ export default function VipPage() {
         </section>
       </div>
     </div>
+  );
+}
+
+export default function VipPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background to-primary/5 p-6">加载中...</div>}>
+      <VipContent />
+    </Suspense>
   );
 }
