@@ -58,12 +58,14 @@ export default function ProfilePage() {
             location: "",
           });
         } else {
-          setProfile(profileData || {
-            display_name: "",
-            avatar_url: "",
-            bio: "",
-            location: "",
-          });
+          // 将数据库中的null值转换为空字符串用于表单显示
+          const formattedProfile = {
+            display_name: profileData?.display_name || "",
+            avatar_url: profileData?.avatar_url || "",
+            bio: profileData?.bio || "",
+            location: profileData?.location || "",
+          };
+          setProfile(formattedProfile);
         }
       } catch (error) {
         console.error("Error fetching user:", error);
@@ -101,7 +103,7 @@ export default function ProfilePage() {
       const filePath = `avatars/${fileName}`;
 
       // 上传文件到Supabase存储
-      const { error: uploadError, data } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from("avatars")
         .upload(filePath, file, {
           cacheControl: "3600",
@@ -118,13 +120,12 @@ export default function ProfilePage() {
       // 更新本地状态
       setProfile(prev => ({ ...prev, avatar_url: publicUrl }));
 
-      // 自动保存到数据库
+      // 自动保存到数据库（不传递updated_at，由数据库触发器自动更新）
       const { error: updateError } = await supabase
         .from("profiles")
         .upsert({
           id: user.id,
           avatar_url: publicUrl,
-          updated_at: new Date().toISOString(),
         });
 
       if (updateError) throw updateError;
@@ -155,7 +156,7 @@ export default function ProfilePage() {
     }
   }
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!user) return;
 
@@ -172,7 +173,6 @@ export default function ProfilePage() {
           avatar_url: profile.avatar_url || null,
           bio: profile.bio || null,
           location: profile.location || null,
-          updated_at: new Date().toISOString(),
         });
 
       if (error) throw error;
@@ -183,7 +183,7 @@ export default function ProfilePage() {
           data: {
             username: profile.display_name,
             name: profile.display_name,
-            avatar_url: profile.avatar_url
+            avatar_url: profile.avatar_url || null
           }
         });
       }

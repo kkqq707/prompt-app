@@ -20,6 +20,7 @@ ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can view their own profile and public profiles" ON profiles;
 DROP POLICY IF EXISTS "Users can insert their own profile" ON profiles;
 DROP POLICY IF EXISTS "Users can update their own profile" ON profiles;
+DROP POLICY IF EXISTS "Users can view all profiles" ON profiles;
 
 -- 4. 创建新的RLS策略
 -- 所有人都可以查看所有资料（公开资料）
