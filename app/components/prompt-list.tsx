@@ -116,17 +116,19 @@ export default function PromptList({
     return data.filter((item) => {
       const lowerKeyword = keyword.toLowerCase().trim();
       const modelStr = item.model || '';
+      const categoryStr = item.category || '';
       const matchKeyword =
         keyword.trim() === "" ||
         item.title.toLowerCase().includes(lowerKeyword) ||
         item.description.toLowerCase().includes(lowerKeyword) ||
-        item.category.toLowerCase().includes(lowerKeyword) ||
+        categoryStr.toLowerCase().includes(lowerKeyword) ||
         modelStr.toLowerCase().includes(lowerKeyword) ||
         item.tags?.some((tag) => tag.toLowerCase().includes(lowerKeyword)) ||
         item.prompt.toLowerCase().includes(lowerKeyword);
 
-      const matchCategory =
-        category === "全部分类" || item.category.toLowerCase() === category.toLowerCase();
+      const targetCategory = category.toLowerCase().trim();
+      const categoryParts = categoryStr.split(/[,/\s]+/).map(part => part.trim().toLowerCase()).filter(part => part.length > 0);
+      const matchCategory = category === "全部分类" || categoryParts.some(part => part === targetCategory);
 
       const targetModel = model.toLowerCase().trim();
       const modelParts = modelStr.split(/[,/\s]+/).map(part => part.trim().toLowerCase()).filter(part => part.length > 0);
