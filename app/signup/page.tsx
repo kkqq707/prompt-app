@@ -57,7 +57,7 @@ export default function SignupPage() {
       <div className="w-full max-w-md rounded-3xl bg-card border border-border p-8 shadow-2xl shadow-primary/10">
         <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">注册</h1>
         <p className="mt-3 text-base text-muted">
-          注册后可收藏提示词、购买单条内容或开通会员。
+          注册后可收藏提示词、发布社区帖子和参与讨论。
         </p>
 
         {error && (

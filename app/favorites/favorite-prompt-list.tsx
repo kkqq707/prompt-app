@@ -8,10 +8,8 @@ import { type PromptItem } from "@/data/prompts";
 
 export default function FavoritePromptList({
   initialData,
-  canAccessPaid = false,
 }: {
   initialData: PromptItem[];
-  canAccessPaid?: boolean;
 }) {
   const supabase = createClient();
   const router = useRouter();
@@ -19,9 +17,6 @@ export default function FavoritePromptList({
   const [data, setData] = useState<PromptItem[]>(initialData);
   const [removingId, setRemovingId] = useState<string | null>(null);
 
-  function goToPurchase(promptId: string) {
-    router.push(`/vip?promptId=${promptId}`);
-  }
 
   async function handleRemoveFavorite(promptId: string) {
     const {
@@ -73,7 +68,6 @@ export default function FavoritePromptList({
   return (
     <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
       {data.map((item) => {
-        const isLocked = item.is_paid && !canAccessPaid;
 
         return (
           <article key={item.id} className="rounded-3xl bg-white p-6 shadow-sm">
@@ -83,11 +77,6 @@ export default function FavoritePromptList({
 
             <h2 className="mt-1 text-xl font-semibold text-slate-900">
               {item.title}
-              {item.is_paid && (
-                <span className="ml-2 text-xs font-medium text-yellow-600">
-                  付费
-                </span>
-              )}
             </h2>
 
             <p className="mt-3 text-sm leading-6 text-slate-600">
@@ -107,10 +96,7 @@ export default function FavoritePromptList({
 
             <div className="mt-4 rounded-2xl bg-slate-50 p-4 text-sm text-slate-700">
               <pre className="whitespace-pre-wrap font-sans leading-6">
-                {isLocked
-                  ? (item.prompt?.slice(0, 80) ?? "") +
-                    "\n\n🔒 付费内容，解锁后可查看完整提示词"
-                  : item.prompt}
+                {item.prompt}
               </pre>
             </div>
 
@@ -123,39 +109,19 @@ export default function FavoritePromptList({
                 {removingId === item.id ? "处理中..." : "取消收藏"}
               </button>
 
-              {isLocked ? (
-                <>
-                  <button
-                    onClick={() => goToPurchase(item.id)}
-                    className="rounded-2xl bg-slate-900 px-4 py-2 text-sm font-medium text-white"
-                  >
-                    ¥0.99 解锁
-                  </button>
+              <button
+                onClick={() => navigator.clipboard.writeText(item.prompt)}
+                className="rounded-2xl bg-slate-900 px-4 py-2 text-sm font-medium text-white"
+              >
+                复制提示词
+              </button>
 
-                  <button
-                    onClick={() => goToPurchase(item.id)}
-                    className="rounded-2xl border border-slate-200 px-4 py-2 text-sm font-medium"
-                  >
-                    查看详情
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button
-                    onClick={() => navigator.clipboard.writeText(item.prompt)}
-                    className="rounded-2xl bg-slate-900 px-4 py-2 text-sm font-medium text-white"
-                  >
-                    复制提示词
-                  </button>
-
-                  <Link
-                    href={`/prompts/${item.id}`}
-                    className="rounded-2xl border border-slate-200 px-4 py-2 text-sm font-medium"
-                  >
-                    查看详情
-                  </Link>
-                </>
-              )}
+              <Link
+                href={`/prompts/${item.id}`}
+                className="rounded-2xl border border-slate-200 px-4 py-2 text-sm font-medium"
+              >
+                查看详情
+              </Link>
             </div>
           </article>
         );

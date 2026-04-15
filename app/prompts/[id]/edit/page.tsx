@@ -23,7 +23,6 @@ export default function EditPromptPage() {
   const [usageTips, setUsageTips] = useState("");
   const [exampleInput, setExampleInput] = useState("");
   const [exampleOutput, setExampleOutput] = useState("");
-  const [isPaid, setIsPaid] = useState(false);
 
   useEffect(() => {
     async function fetchPrompt() {
@@ -48,7 +47,6 @@ export default function EditPromptPage() {
       setUsageTips(data.usage_tips ?? "");
       setExampleInput(data.example_input ?? "");
       setExampleOutput(data.example_output ?? "");
-      setIsPaid(data.is_paid ?? false);
       setPageLoading(false);
     }
 
@@ -74,7 +72,6 @@ export default function EditPromptPage() {
         usage_tips: usageTips,
         example_input: exampleInput,
         example_output: exampleOutput,
-        is_paid: isPaid,
       })
       .eq("id", id);
 
@@ -217,14 +214,6 @@ export default function EditPromptPage() {
             </div>
           </div>
 
-          <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
-            <input
-              type="checkbox"
-              checked={isPaid}
-              onChange={(e) => setIsPaid(e.target.checked)}
-            />
-            设为付费内容
-          </label>
 
           <button
             type="submit"

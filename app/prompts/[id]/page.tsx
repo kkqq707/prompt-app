@@ -28,56 +28,24 @@ export default async function PromptDetailPage({
     notFound();
   }
 
-  const isFreePrompt = !prompt.is_paid;
-  const adminEmails = ["399569499@qq.com"];
-
-  let hasUnlockedThisPrompt = false;
-  let hasActiveMembership = false;
   let initialFavorited = false;
 
   if (user) {
-    const [{ data: unlock }, { data: membership }, { data: favorite }] =
-      await Promise.all([
-        supabase
-          .from("user_prompt_unlocks")
-          .select("id")
-          .eq("user_id", user.id)
-          .eq("prompt_id", prompt.id)
-          .maybeSingle(),
+    const { data: favorite } = await supabase
+      .from("favorites")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("prompt_id", prompt.id)
+      .maybeSingle();
 
-        supabase
-          .from("user_memberships")
-          .select("id")
-          .eq("user_id", user.id)
-          .gt("end_at", new Date().toISOString())
-          .order("end_at", { ascending: false })
-          .limit(1)
-          .maybeSingle(),
-
-        supabase
-          .from("favorites")
-          .select("id")
-          .eq("user_id", user.id)
-          .eq("prompt_id", prompt.id)
-          .maybeSingle(),
-      ]);
-
-    hasUnlockedThisPrompt = !!unlock;
-    hasActiveMembership = !!membership;
     initialFavorited = !!favorite;
   }
 
-  // 管理员账户自动拥有永久会员
-  if (user && adminEmails.includes(user.email ?? "")) {
-    hasActiveMembership = true;
-  }
-
-  const canViewFull =
-    isFreePrompt || hasUnlockedThisPrompt || hasActiveMembership;
+  // 所有内容现在都免费
 
   const { data: relatedPrompts } = await supabase
     .from("prompts")
-    .select("id, title, description, category, model, is_paid")
+    .select("id, title, description, category, model")
     .eq("category", prompt.category)
     .neq("id", prompt.id)
     .limit(6);
@@ -111,11 +79,6 @@ export default async function PromptDetailPage({
             <span className="rounded-full bg-secondary/10 px-4 py-1.5 font-medium text-secondary">
               {prompt.model}
             </span>
-            {prompt.is_paid && (
-              <span className="rounded-full bg-gradient-to-r from-amber-500 to-orange-500 px-4 py-1.5 font-semibold text-white">
-                💎 付费
-              </span>
-            )}
           </div>
 
           <h1 className="mt-6 text-4xl font-bold tracking-tight bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
@@ -149,65 +112,17 @@ export default async function PromptDetailPage({
                   initialFavorited={initialFavorited}
                 />
 
-                {canViewFull ? (
-                  <CopyPromptButton prompt={prompt.prompt} />
-                ) : (
-                  <>
-                    <Link
-                      href={`/vip?promptId=${prompt.id}`}
-                      className="rounded-2xl bg-gradient-to-r from-primary to-primary-dark px-5 py-2.5 text-sm font-semibold text-white shadow-md transition-all hover:shadow-lg hover:shadow-primary/30"
-                    >
-                      🔓 ¥0.99 解锁本条
-                    </Link>
-
-                    <Link
-                      href={`/vip?promptId=${prompt.id}`}
-                      className="rounded-2xl border border-border bg-card px-5 py-2.5 text-sm font-medium text-secondary transition-all hover:border-secondary hover:bg-secondary/5 hover:text-secondary"
-                    >
-                      👑 开通会员
-                    </Link>
-                  </>
-                )}
+                <CopyPromptButton prompt={prompt.prompt} />
               </div>
             </div>
 
             <div className="rounded-2xl bg-gradient-to-br from-background to-slate-100/50 border border-border p-6">
               <pre className="whitespace-pre-wrap break-words font-sans text-sm leading-8 text-card-foreground">
-                {canViewFull
-                  ? prompt.prompt
-                  : (prompt.prompt?.slice(0, 150) ?? "") +
-                    "\n\n🔒 当前内容为付费提示词，可花 ¥0.99 解锁本条，或开通会员查看全部付费内容。"}
+                {prompt.prompt}
               </pre>
             </div>
           </div>
 
-          {!canViewFull && (
-            <div className="mt-8 rounded-2xl bg-gradient-to-br from-background to-primary/5 border border-border p-6">
-              <h3 className="text-lg font-bold text-card-foreground">
-                解锁方式
-              </h3>
-
-              <div className="mt-6 flex flex-wrap gap-4">
-                <Link
-                  href={`/vip?promptId=${prompt.id}`}
-                  className="rounded-2xl bg-gradient-to-r from-primary to-primary-dark px-5 py-2.5 text-sm font-semibold text-white shadow-md transition-all hover:shadow-lg hover:shadow-primary/30"
-                >
-                  🔓 ¥0.99 解锁当前提示词
-                </Link>
-
-                <Link
-                  href={`/vip?promptId=${prompt.id}`}
-                  className="rounded-2xl border border-border bg-card px-5 py-2.5 text-sm font-medium text-secondary transition-all hover:border-secondary hover:bg-secondary/5 hover:text-secondary"
-                >
-                  👑 ¥9.9 起开通会员
-                </Link>
-              </div>
-
-              <p className="mt-4 text-sm leading-7 text-muted">
-                单条解锁适合低门槛体验，会员可在有效期内查看全部付费提示词。
-              </p>
-            </div>
-          )}
         </article>
 
         <section className="rounded-3xl bg-card border border-border p-8 shadow-lg shadow-primary/5">
@@ -241,11 +156,9 @@ export default async function PromptDetailPage({
                 <h3 className="text-lg font-semibold text-card-foreground">示例输出</h3>
                 <div className="mt-4 text-sm leading-8 text-muted">
                   <pre className="whitespace-pre-wrap break-words font-sans">
-                    {canViewFull
-                      ? prompt.example_output?.trim()
-                        ? prompt.example_output
-                        : "这里会展示一个参考输出结果，帮助用户更快理解这个提示词的实际效果。"
-                      : "🔒 解锁后可查看完整示例输出"}
+                    {prompt.example_output?.trim()
+                      ? prompt.example_output
+                      : "这里会展示一个参考输出结果，帮助用户更快理解这个提示词的实际效果。"}
                   </pre>
                 </div>
               </div>
@@ -271,11 +184,6 @@ export default async function PromptDetailPage({
                     <span className="rounded-full bg-secondary/10 px-3 py-1 text-secondary">
                       {item.model}
                     </span>
-                    {item.is_paid && (
-                      <span className="rounded-full bg-gradient-to-r from-amber-500 to-orange-500 px-3 py-1 text-xs font-semibold text-white">
-                        付费
-                      </span>
-                    )}
                   </div>
                   <h3 className="mt-3 text-lg font-semibold text-card-foreground group-hover:text-primary">
                     {item.title}

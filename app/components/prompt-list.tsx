@@ -11,15 +11,11 @@ export default function PromptList({
   canManage,
   initialFavoriteIds = [],
   showFavoriteButton = false,
-  canAccessPaid = false,
-  isLoggedIn = false,
 }: {
   initialData: PromptItem[];
   canManage: boolean;
   initialFavoriteIds?: string[];
   showFavoriteButton?: boolean;
-  canAccessPaid?: boolean;
-  isLoggedIn?: boolean;
 }) {
   const supabase = createClient();
   const router = useRouter();
@@ -36,15 +32,6 @@ export default function PromptList({
     null
   );
 
-  function handlePaidAction(promptId: string) {
-    const ok = window.confirm(
-      "该提示词为付费内容。\n\n你可以：\n1. 开通会员查看全部付费提示词\n2. 支付 0.99 元解锁当前提示词\n\n点击“确定”前往解锁页面。"
-    );
-
-    if (ok) {
-      router.push(`/vip?promptId=${promptId}`);
-    }
-  }
 
   async function handleDelete(id: string) {
     const confirmed = window.confirm("确定要删除这条提示词吗？");
@@ -240,7 +227,7 @@ export default function PromptList({
       {filteredPrompts.length > 0 ? (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {filteredPrompts.map((item) => {
-            const isLocked = item.is_paid && !canAccessPaid;
+            // 所有内容现在都免费，无需锁定逻辑
 
             return (
               <article
@@ -258,11 +245,6 @@ export default function PromptList({
                     </span>
                   </div>
 
-                  {item.is_paid && (
-                    <span className="rounded-full bg-gradient-to-r from-amber-500 to-orange-500 px-3 py-1 text-xs font-semibold text-white">
-                      💎 付费
-                    </span>
-                  )}
                 </div>
 
                 {/* Card Content */}
@@ -292,19 +274,8 @@ export default function PromptList({
                   <div className="rounded-lg bg-surface border border-border p-4">
                     <div className="relative">
                       <pre className="whitespace-pre-wrap break-words font-sans text-sm text-card-foreground line-clamp-3">
-                        {isLocked
-                          ? (item.prompt?.slice(0, 120) ?? "") +
-                            "\n\n🔒 付费内容，开通会员或单独解锁后可查看完整提示词"
-                          : item.prompt?.slice(0, 180)}
+                        {item.prompt?.slice(0, 180)}
                       </pre>
-                      {isLocked && (
-                        <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-white/80 backdrop-blur-sm dark:bg-card/80">
-                          <div className="text-center">
-                            <div className="mb-2 text-2xl">🔒</div>
-                            <div className="text-sm font-medium text-card-foreground">付费内容已隐藏</div>
-                          </div>
-                        </div>
-                      )}
                     </div>
                   </div>
                 </div>
@@ -339,31 +310,12 @@ export default function PromptList({
                     )}
 
                     {/* Action Buttons */}
-                    {isLocked ? (
-                      <>
-                        <button
-                          onClick={() => handlePaidAction(item.id)}
-                          className="inline-flex items-center justify-center rounded-lg bg-gradient-to-r from-primary to-primary-dark px-3 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary/20"
-                        >
-                          🔓 解锁
-                        </button>
-                        <button
-                          onClick={() => handlePaidAction(item.id)}
-                          className="inline-flex items-center justify-center rounded-lg border border-primary bg-primary/5 px-3 py-2 text-sm font-medium text-primary transition-all hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary/20"
-                        >
-                          💎 会员
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <Link
-                          href={`/prompts/${item.id}`}
-                          className="inline-flex items-center justify-center rounded-lg bg-gradient-to-r from-primary to-primary-dark px-3 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary/20"
-                        >
-                          🔍 详情
-                        </Link>
-                      </>
-                    )}
+                    <Link
+                      href={`/prompts/${item.id}`}
+                      className="inline-flex items-center justify-center rounded-lg bg-gradient-to-r from-primary to-primary-dark px-3 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    >
+                      🔍 详情
+                    </Link>
 
                     {/* Admin Actions */}
                     {canManage && (

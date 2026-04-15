@@ -18,39 +18,18 @@ export default async function HomePage() {
     .order("created_at", { ascending: false });
 
   let favoriteIds: string[] = [];
-  let canAccessPaid = false;
-  let membershipEndAt: string | null = null;
 
   if (user) {
-    const [{ data: favorites }, { data: membership }] = await Promise.all([
-      supabase
-        .from("favorites")
-        .select("prompt_id")
-        .eq("user_id", user.id),
-
-      supabase
-        .from("user_memberships")
-        .select("id, end_at")
-        .eq("user_id", user.id)
-        .gt("end_at", new Date().toISOString())
-        .order("end_at", { ascending: false })
-        .limit(1)
-        .maybeSingle(),
-    ]);
+    const { data: favorites } = await supabase
+      .from("favorites")
+      .select("prompt_id")
+      .eq("user_id", user.id);
 
     favoriteIds = favorites?.map((item) => item.prompt_id) ?? [];
-    canAccessPaid = !!membership;
-    membershipEndAt = membership?.end_at ?? null;
   }
 
   const adminEmails = ["399569499@qq.com"];
   const canManage = !!user && adminEmails.includes(user.email ?? "");
-
-  // 管理员账户自动拥有永久会员
-  if (user && adminEmails.includes(user.email ?? "")) {
-    canAccessPaid = true;
-    membershipEndAt = new Date(Date.now() + 100 * 365 * 24 * 60 * 60 * 1000).toISOString(); // 100年后
-  }
 
   return (
     <div className="min-h-screen bg-surface text-foreground">
@@ -92,7 +71,7 @@ export default async function HomePage() {
           <div className="mb-8 rounded-xl border border-border bg-gradient-to-r from-primary/5 to-secondary/5 p-8 text-center">
             <h2 className="text-2xl font-bold text-card-foreground">开始您的AI创作之旅</h2>
             <p className="mx-auto mt-2 max-w-2xl text-muted">
-              注册账号即可收藏喜欢的提示词，开通会员解锁全部付费内容
+              注册账号即可收藏喜欢的提示词，参与社区讨论
             </p>
             <div className="mt-6 flex flex-wrap justify-center gap-4">
               <Link
@@ -116,8 +95,6 @@ export default async function HomePage() {
           canManage={canManage}
           initialFavoriteIds={favoriteIds}
           showFavoriteButton={!!user}
-          canAccessPaid={canAccessPaid}
-          isLoggedIn={!!user}
         />
       </div>
     </div>

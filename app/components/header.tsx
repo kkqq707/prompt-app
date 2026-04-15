@@ -34,10 +34,10 @@ export default async function Header() {
               首页
             </Link>
             <Link
-              href="/vip"
+              href="/community"
               className="rounded-lg px-3 py-2 text-sm font-medium text-muted transition-all hover:bg-surface hover:text-primary"
             >
-              会员
+              社区
             </Link>
             {user && (
               <Link
@@ -85,11 +85,11 @@ export default async function Header() {
             首页
           </Link>
           <Link
-            href="/vip"
+            href="/community"
             className="flex flex-col items-center px-3 py-2 text-xs font-medium text-muted hover:text-primary"
           >
-            <span className="mb-1">👑</span>
-            会员
+            <span className="mb-1">💬</span>
+            社区
           </Link>
           {user && (
             <Link

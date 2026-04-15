@@ -18,7 +18,6 @@ export default function NewPromptPage() {
   const [usageTips, setUsageTips] = useState("");
   const [exampleInput, setExampleInput] = useState("");
   const [exampleOutput, setExampleOutput] = useState("");
-  const [isPaid, setIsPaid] = useState(false);
 
   const [loading, setLoading] = useState(false);
 
@@ -51,7 +50,6 @@ export default function NewPromptPage() {
         usage_tips: usageTips,
         example_input: exampleInput,
         example_output: exampleOutput,
-        is_paid: isPaid,
         owner_id: user.id,
       },
     ]);
@@ -185,14 +183,6 @@ export default function NewPromptPage() {
             </div>
           </div>
 
-          <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
-            <input
-              type="checkbox"
-              checked={isPaid}
-              onChange={(e) => setIsPaid(e.target.checked)}
-            />
-            设为付费内容
-          </label>
 
           <button
             type="submit"
