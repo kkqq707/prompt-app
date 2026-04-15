@@ -55,7 +55,7 @@ export default function EditPromptPage() {
     fetchPrompt();
   }, [id, router, supabase]);
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
 
@@ -134,7 +134,7 @@ export default function EditPromptPage() {
               <input
                 value={model}
                 onChange={(e) => setModel(e.target.value)}
-                placeholder="模型"
+                placeholder="例如：ChatGPT / Claude / Gemini / deepseek / 豆包 / kimi"
                 className="w-full rounded-2xl border border-slate-200 px-4 py-3"
                 required
               />

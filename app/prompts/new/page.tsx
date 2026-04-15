@@ -22,7 +22,7 @@ export default function NewPromptPage() {
 
   const [loading, setLoading] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
     const {
@@ -102,7 +102,7 @@ export default function NewPromptPage() {
               <input
                 value={model}
                 onChange={(e) => setModel(e.target.value)}
-                placeholder="例如：ChatGPT / Claude / Gemini"
+                placeholder="例如：ChatGPT / Claude / Gemini / deepseek / 豆包 / kimi"
                 className="w-full rounded-2xl border border-slate-200 px-4 py-3"
                 required
               />

@@ -114,19 +114,20 @@ export default function PromptList({
 
   const filteredPrompts = useMemo(() => {
     return data.filter((item) => {
+      const lowerKeyword = keyword.toLowerCase().trim();
       const matchKeyword =
         keyword.trim() === "" ||
-        item.title.includes(keyword) ||
-        item.description.includes(keyword) ||
-        item.category.includes(keyword) ||
-        item.model.includes(keyword) ||
-        item.tags?.some((tag) => tag.includes(keyword)) ||
-        item.prompt.includes(keyword);
+        item.title.toLowerCase().includes(lowerKeyword) ||
+        item.description.toLowerCase().includes(lowerKeyword) ||
+        item.category.toLowerCase().includes(lowerKeyword) ||
+        item.model.toLowerCase().includes(lowerKeyword) ||
+        item.tags?.some((tag) => tag.toLowerCase().includes(lowerKeyword)) ||
+        item.prompt.toLowerCase().includes(lowerKeyword);
 
       const matchCategory =
-        category === "全部分类" || item.category === category;
+        category === "全部分类" || item.category.toLowerCase() === category.toLowerCase();
 
-      const matchModel = model === "全部模型" || item.model === model;
+      const matchModel = model === "全部模型" || item.model.toLowerCase() === model.toLowerCase();
 
       return matchKeyword && matchCategory && matchModel;
     });
@@ -197,7 +198,9 @@ export default function PromptList({
                 <option>ChatGPT</option>
                 <option>Claude</option>
                 <option>Gemini</option>
-                <option>chatgpt</option>
+                <option>deepseek</option>
+                <option>豆包</option>
+                <option>kimi</option>
               </select>
             </div>
 
