@@ -81,6 +81,84 @@ export default function ProfilePage() {
     fetchUserAndProfile();
   }, [supabase, router]);
 
+  // 图片压缩函数
+  async function compressImage(file: File, maxWidth = 800, quality = 0.8): Promise<File> {
+    return new Promise((resolve, reject) => {
+      // 如果文件小于500KB，不压缩
+      if (file.size < 500 * 1024) {
+        resolve(file);
+        return;
+      }
+
+      const img = new Image();
+      const reader = new FileReader();
+
+      reader.onload = (e) => {
+        if (!e.target?.result) {
+          reject(new Error("读取文件失败"));
+          return;
+        }
+
+        img.src = e.target.result as string;
+      };
+
+      reader.onerror = () => reject(new Error("读取文件失败"));
+
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        let width = img.width;
+        let height = img.height;
+
+        // 按比例缩放
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          reject(new Error("无法获取canvas上下文"));
+          return;
+        }
+
+        // 绘制压缩后的图片
+        ctx.drawImage(img, 0, 0, width, height);
+
+        // 转换为Blob
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              reject(new Error("图片压缩失败"));
+              return;
+            }
+
+            // 创建新的File对象
+            const compressedFile = new File(
+              [blob],
+              file.name.replace(/\.[^/.]+$/, "") + "_compressed.jpg", // 统一为jpg格式
+              { type: "image/jpeg", lastModified: Date.now() }
+            );
+
+            console.log(`图片压缩: ${file.size} -> ${compressedFile.size} bytes`);
+            resolve(compressedFile);
+          },
+          "image/jpeg",
+          quality
+        );
+      };
+
+      img.onerror = () => {
+        console.warn("图片加载失败，使用原始文件");
+        resolve(file); // 压缩失败时返回原始文件
+      };
+
+      reader.readAsDataURL(file);
+    });
+  }
+
   async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file || !user) return;
@@ -101,17 +179,42 @@ export default function ProfilePage() {
     setMessage(null);
 
     try {
-      // 生成唯一文件名
-      const fileExt = file.name.split(".").pop();
-      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+      // 1. 图片压缩优化（提高上传速度，特别是手机端）
+      let finalFile = file;
+      console.log("原始文件大小:", file.size, "bytes");
+
+      try {
+        // 只在支持canvas的浏览器中压缩
+        if (typeof document !== 'undefined' && typeof HTMLCanvasElement !== 'undefined') {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            console.log("开始图片压缩...");
+            finalFile = await compressImage(file, 800, 0.7);
+            console.log("压缩后文件大小:", finalFile.size, "bytes",
+                       "压缩率:", Math.round((1 - finalFile.size / file.size) * 100) + "%");
+          } else {
+            console.log("浏览器不支持canvas 2d context，跳过图片压缩");
+          }
+        } else {
+          console.log("浏览器不支持canvas API，跳过图片压缩");
+        }
+      } catch (compressError) {
+        console.warn("图片压缩失败，使用原始文件:", compressError);
+        finalFile = file; // 压缩失败时使用原始文件
+      }
+
+      // 2. 生成唯一文件名（压缩后统一使用jpg扩展名）
+      const fileName = `${user.id}/${Date.now()}.jpg`; // 压缩后统一为jpg格式
       const filePath = `avatars/${fileName}`;
 
-      // 上传文件到Supabase存储
+      // 3. 上传文件到Supabase存储（优化选项加快速度）
+      console.log("开始上传文件...");
       const { error: uploadError } = await supabase.storage
         .from("avatars")
-        .upload(filePath, file, {
-          cacheControl: "3600",
-          upsert: true,
+        .upload(filePath, finalFile, {
+          cacheControl: "0", // 设置为0避免CDN缓存，加快刷新速度
+          upsert: false, // 避免复杂的RLS检查，简化上传
         });
 
       if (uploadError) throw uploadError;
@@ -121,51 +224,120 @@ export default function ProfilePage() {
         .from("avatars")
         .getPublicUrl(filePath);
 
-      // 更新本地状态
-      setProfile(prev => ({ ...prev, avatar_url: publicUrl }));
+      // 调试日志
+      console.log("头像上传成功:");
+      console.log("- 文件路径:", filePath);
+      console.log("- 公共URL:", publicUrl);
+      console.log("- 完整URL格式:", supabase.storage.from("avatars").getPublicUrl(filePath));
 
-      // 更安全的头像保存逻辑：先检查profile是否存在
-      // 避免upsert的RLS策略冲突问题
-      const { data: existingProfile, error: checkError } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("id", user.id)
-        .maybeSingle();  // 使用maybeSingle避免"未找到行"的错误
+      // 添加缓存破坏参数，避免浏览器缓存旧头像
+      const timestamp = Date.now();
+      const urlWithCacheBust = `${publicUrl}${publicUrl.includes('?') ? '&' : '?'}t=${timestamp}`;
 
-      if (checkError) throw checkError;
+      // 立即更新本地状态，让用户立刻看到变化（不等待预加载）
+      setProfile(prev => ({ ...prev, avatar_url: urlWithCacheBust }));
 
-      if (existingProfile) {
-        // 已存在profile，使用update更新头像
-        const { error: updateError } = await supabase
-          .from("profiles")
-          .update({ avatar_url: publicUrl })
-          .eq("id", user.id);
+      // 异步预加载图片（后台进行，不阻塞UI）
+      const preloadImage = async () => {
+        try {
+          await new Promise((resolve) => {
+            const img = new Image();
+            img.onload = () => {
+              console.log("图片预加载成功:", urlWithCacheBust);
+              resolve(true);
+            };
+            img.onerror = () => {
+              console.warn("图片预加载失败:", urlWithCacheBust);
+              resolve(false);
+            };
+            img.src = urlWithCacheBust;
 
-        if (updateError) throw updateError;
-      } else {
-        // 不存在profile，创建新的profile记录
-        const { error: insertError } = await supabase
-          .from("profiles")
-          .insert({
-            id: user.id,
-            display_name: profile.display_name ||
-              user.user_metadata?.username ||
-              user.user_metadata?.name ||
-              user.email?.split("@")[0] ||
-              "",
-            avatar_url: publicUrl,
-            bio: profile.bio || null,
-            website: profile.website || null,
-            location: profile.location || null,
+            // 设置超时，避免长时间等待
+            setTimeout(() => {
+              console.log("图片预加载超时");
+              resolve(false);
+            }, 3000); // 3秒超时
           });
+        } catch (error) {
+          console.error("图片预加载异常:", error);
+        }
+      };
 
-        if (insertError) throw insertError;
-      }
+      // 启动预加载（不await，让它在后台运行）
+      preloadImage();
 
-      // 更新用户元数据
-      await supabase.auth.updateUser({
-        data: { avatar_url: publicUrl }
-      });
+      // 后台处理数据库操作（不阻塞UI更新）
+      const updateDatabaseOperations = async () => {
+        try {
+          // 检查profile是否存在
+          const { data: existingProfile, error: checkError } = await supabase
+            .from("profiles")
+            .select("id")
+            .eq("id", user.id)
+            .maybeSingle();
+
+          if (checkError) {
+            console.error("检查profile失败:", checkError);
+            return;
+          }
+
+          // 并行执行数据库更新和用户元数据更新
+          const operations = [];
+
+          if (existingProfile) {
+            // 更新现有profile的头像
+            operations.push(
+              supabase
+                .from("profiles")
+                .update({ avatar_url: urlWithCacheBust })
+                .eq("id", user.id)
+                .then(({ error }) => {
+                  if (error) console.error("更新profile失败:", error);
+                })
+            );
+          } else {
+            // 创建新的profile记录
+            operations.push(
+              supabase
+                .from("profiles")
+                .insert({
+                  id: user.id,
+                  display_name: profile.display_name ||
+                    user.user_metadata?.username ||
+                    user.user_metadata?.name ||
+                    user.email?.split("@")[0] ||
+                    "",
+                  avatar_url: urlWithCacheBust,
+                  bio: profile.bio || null,
+                  website: profile.website || null,
+                  location: profile.location || null,
+                })
+                .then(({ error }) => {
+                  if (error) console.error("插入profile失败:", error);
+                })
+            );
+          }
+
+          // 更新用户元数据（并行执行）
+          operations.push(
+            supabase.auth.updateUser({
+              data: { avatar_url: urlWithCacheBust }
+            }).then(({ error }) => {
+              if (error) console.error("更新用户元数据失败:", error);
+            })
+          );
+
+          // 等待所有操作完成（不阻塞UI）
+          await Promise.all(operations);
+          console.log("所有数据库操作完成");
+        } catch (error) {
+          console.error("数据库操作异常:", error);
+          // 不抛出错误，避免影响用户体验
+        }
+      };
+
+      // 启动后台数据库操作
+      updateDatabaseOperations();
 
       setMessage({ type: "success", text: "头像上传成功！" });
       router.refresh(); // 刷新页面以更新用户菜单
@@ -293,11 +465,32 @@ export default function ProfilePage() {
                 {profile.avatar_url ? (
                   <>
                     <img
-                      src={profile.avatar_url}
+                      src={profile.avatar_url ? `${profile.avatar_url.split('?')[0]}?t=${Date.now()}` : ''}
                       alt="头像"
                       className="h-full w-full rounded-full object-cover border-4 border-primary/20 shadow-lg group-hover:opacity-90 transition-opacity"
                       onError={(e) => {
                         const target = e.target as HTMLImageElement;
+                        console.error("头像图片加载失败:", {
+                          src: target.src,
+                          avatar_url: profile.avatar_url,
+                          error: e
+                        });
+
+                        // 尝试使用新的时间戳重试一次
+                        const originalUrl = profile.avatar_url || '';
+                        const cleanUrl = originalUrl.split('?')[0]; // 移除查询参数
+                        const retryUrl = `${cleanUrl}?retry=${Date.now()}`;
+
+                        console.log("尝试重试URL:", retryUrl);
+
+                        // 设置重试（最多重试一次）
+                        if (!target.dataset.retried) {
+                          target.dataset.retried = 'true';
+                          target.src = retryUrl;
+                          return;
+                        }
+
+                        // 如果重试也失败，显示默认头像
                         target.style.display = "none";
                         const parent = target.parentElement;
                         if (parent) {
@@ -306,6 +499,9 @@ export default function ProfilePage() {
                           fallback.textContent = (profile.display_name || "用户").charAt(0).toUpperCase();
                           parent.appendChild(fallback);
                         }
+                      }}
+                      onLoad={() => {
+                        console.log("头像图片加载成功:", profile.avatar_url);
                       }}
                     />
                     <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
