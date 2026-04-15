@@ -115,19 +115,22 @@ export default function PromptList({
   const filteredPrompts = useMemo(() => {
     return data.filter((item) => {
       const lowerKeyword = keyword.toLowerCase().trim();
+      const modelStr = item.model || '';
       const matchKeyword =
         keyword.trim() === "" ||
         item.title.toLowerCase().includes(lowerKeyword) ||
         item.description.toLowerCase().includes(lowerKeyword) ||
         item.category.toLowerCase().includes(lowerKeyword) ||
-        item.model.toLowerCase().includes(lowerKeyword) ||
+        modelStr.toLowerCase().includes(lowerKeyword) ||
         item.tags?.some((tag) => tag.toLowerCase().includes(lowerKeyword)) ||
         item.prompt.toLowerCase().includes(lowerKeyword);
 
       const matchCategory =
         category === "全部分类" || item.category.toLowerCase() === category.toLowerCase();
 
-      const matchModel = model === "全部模型" || item.model.toLowerCase() === model.toLowerCase();
+      const targetModel = model.toLowerCase().trim();
+      const modelParts = modelStr.split(/[,/\s]+/).map(part => part.trim().toLowerCase()).filter(part => part.length > 0);
+      const matchModel = model === "全部模型" || modelParts.some(part => part === targetModel);
 
       return matchKeyword && matchCategory && matchModel;
     });

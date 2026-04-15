@@ -16,6 +16,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "AI Prompt",
   description: "AI提示词库 - 收集高质量AI提示词模板，支持搜索、分类筛选、收藏、付费解锁与会员查看",
+  icons: {
+    icon: "/icon.svg",
+  },
 };
 
 export default function RootLayout({
