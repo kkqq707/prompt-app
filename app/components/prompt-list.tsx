@@ -136,10 +136,10 @@ export default function PromptList({
     <>
       {/* Search & Filter Section */}
       <div className="mb-8">
-        <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
+        <div className="rounded-xl border border-primary/20 bg-gradient-to-r from-primary/5 to-secondary/5 p-8 shadow-lg">
           <div className="mb-6">
-            <h2 className="text-lg font-semibold text-card-foreground">筛选提示词</h2>
-            <p className="mt-1 text-sm text-muted">根据您的需求快速找到合适的AI提示词</p>
+            <h2 className="text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">搜索与筛选提示词</h2>
+            <p className="mt-2 text-sm text-muted">通过关键词、分类和AI模型快速定位您需要的提示词</p>
           </div>
 
           <div className="space-y-4 md:space-y-0 md:flex md:items-end md:gap-4">
@@ -348,18 +348,9 @@ export default function PromptList({
                       </>
                     ) : (
                       <>
-                        <button
-                          onClick={() => {
-                            navigator.clipboard.writeText(item.prompt);
-                            alert("已复制提示词");
-                          }}
-                          className="inline-flex items-center justify-center rounded-lg bg-gradient-to-r from-primary to-primary-dark px-3 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary/20"
-                        >
-                          📋 复制
-                        </button>
                         <Link
                           href={`/prompts/${item.id}`}
-                          className="inline-flex items-center justify-center rounded-lg border border-border bg-white px-3 py-2 text-sm font-medium text-card-foreground transition-all hover:bg-surface hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 dark:bg-card"
+                          className="inline-flex items-center justify-center rounded-lg bg-gradient-to-r from-primary to-primary-dark px-3 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary/20"
                         >
                           🔍 详情
                         </Link>
