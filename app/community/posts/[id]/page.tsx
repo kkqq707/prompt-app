@@ -1,8 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
-import { formatDistanceToNow } from "date-fns";
-import { zhCN } from "date-fns/locale";
 import CommentSection from "./components/comment-section";
 import LikeButton from "./components/like-button";
 import FavoriteButton from "./components/favorite-button";
@@ -71,10 +69,40 @@ export default async function PostDetailPage({
     .update({ view_count: (post.view_count || 0) + 1 })
     .eq("id", post.id);
 
-  const timeAgo = formatDistanceToNow(new Date(post.created_at), {
-    addSuffix: true,
-    locale: zhCN,
-  });
+  function formatTimeAgo(dateString: string): string {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (diffInSeconds < 60) {
+      return `${diffInSeconds}秒前`;
+    }
+
+    const diffInMinutes = Math.floor(diffInSeconds / 60);
+    if (diffInMinutes < 60) {
+      return `${diffInMinutes}分钟前`;
+    }
+
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    if (diffInHours < 24) {
+      return `${diffInHours}小时前`;
+    }
+
+    const diffInDays = Math.floor(diffInHours / 24);
+    if (diffInDays < 30) {
+      return `${diffInDays}天前`;
+    }
+
+    const diffInMonths = Math.floor(diffInDays / 30);
+    if (diffInMonths < 12) {
+      return `${diffInMonths}个月前`;
+    }
+
+    const diffInYears = Math.floor(diffInMonths / 12);
+    return `${diffInYears}年前`;
+  }
+
+  const timeAgo = formatTimeAgo(post.created_at);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-primary/5 p-4 sm:p-6">

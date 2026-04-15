@@ -2,8 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { createClient } from "@/utils/supabase/client";
-import { formatDistanceToNow } from "date-fns";
-import { zhCN } from "date-fns/locale";
 
 interface Comment {
   id: string;
@@ -169,11 +167,41 @@ export default function CommentSection({ postId, currentUserId }: CommentSection
     }
   };
 
+  function formatTimeAgo(dateString: string): string {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (diffInSeconds < 60) {
+      return `${diffInSeconds}秒前`;
+    }
+
+    const diffInMinutes = Math.floor(diffInSeconds / 60);
+    if (diffInMinutes < 60) {
+      return `${diffInMinutes}分钟前`;
+    }
+
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    if (diffInHours < 24) {
+      return `${diffInHours}小时前`;
+    }
+
+    const diffInDays = Math.floor(diffInHours / 24);
+    if (diffInDays < 30) {
+      return `${diffInDays}天前`;
+    }
+
+    const diffInMonths = Math.floor(diffInDays / 30);
+    if (diffInMonths < 12) {
+      return `${diffInMonths}个月前`;
+    }
+
+    const diffInYears = Math.floor(diffInMonths / 12);
+    return `${diffInYears}年前`;
+  }
+
   const renderComment = (comment: Comment, level = 0) => {
-    const timeAgo = formatDistanceToNow(new Date(comment.created_at), {
-      addSuffix: true,
-      locale: zhCN,
-    });
+    const timeAgo = formatTimeAgo(comment.created_at);
 
     return (
       <div key={comment.id} className={`${level > 0 ? "ml-6 sm:ml-8 mt-4" : "mt-6"}`}>
