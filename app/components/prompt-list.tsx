@@ -229,10 +229,21 @@ export default function PromptList({
           {filteredPrompts.map((item) => {
             // 所有内容现在都免费，无需锁定逻辑
 
+            const goDetail = () => router.push(`/prompts/${item.id}`);
+
             return (
               <article
                 key={item.id}
-                className="group flex flex-col rounded-xl border border-border bg-card p-5 shadow-sm transition-all hover:shadow-md hover:-translate-y-1"
+                className="group flex flex-col rounded-xl border border-border bg-card p-5 shadow-sm transition-all hover:shadow-md hover:-translate-y-1 cursor-pointer"
+                onClick={goDetail}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    goDetail();
+                  }
+                }}
+                tabIndex={0}
+                role="button"
               >
                 {/* Card Header */}
                 <div className="mb-4 flex items-start justify-between">
@@ -286,7 +297,7 @@ export default function PromptList({
                     {/* Favorite Button */}
                     {showFavoriteButton && (
                       <button
-                        onClick={() => handleToggleFavorite(item.id)}
+                        onClick={(e) => { e.stopPropagation(); handleToggleFavorite(item.id); }}
                         disabled={togglingFavoriteId === item.id}
                         className="inline-flex items-center justify-center rounded-lg border border-border bg-white px-3 py-2 text-sm font-medium text-card-foreground transition-all hover:bg-surface hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-60 dark:bg-card"
                       >
@@ -309,25 +320,26 @@ export default function PromptList({
                       </button>
                     )}
 
-                    {/* Action Buttons */}
-                    <Link
-                      href={`/prompts/${item.id}`}
+                    {/* Detail Button */}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); goDetail(); }}
                       className="inline-flex items-center justify-center rounded-lg bg-gradient-to-r from-primary to-primary-dark px-3 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary/20"
                     >
                       🔍 详情
-                    </Link>
+                    </button>
 
                     {/* Admin Actions */}
                     {canManage && (
                       <>
                         <Link
                           href={`/prompts/${item.id}/edit`}
+                          onClick={(e) => e.stopPropagation()}
                           className="inline-flex items-center justify-center rounded-lg border border-border bg-white px-3 py-2 text-sm font-medium text-card-foreground transition-all hover:bg-surface hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 dark:bg-card"
                         >
                           ✏️ 编辑
                         </Link>
                         <button
-                          onClick={() => handleDelete(item.id)}
+                          onClick={(e) => { e.stopPropagation(); handleDelete(item.id); }}
                           disabled={deletingId === item.id}
                           className="inline-flex items-center justify-center rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-600 transition-all hover:bg-red-100 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500/20 disabled:opacity-60 dark:border-red-800 dark:bg-red-900/30 dark:text-red-300"
                         >

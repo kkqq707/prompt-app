@@ -68,9 +68,22 @@ export default function FavoritePromptList({
   return (
     <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
       {data.map((item) => {
+        const goDetail = () => router.push(`/prompts/${item.id}`);
 
         return (
-          <article key={item.id} className="rounded-3xl bg-white p-6 shadow-sm">
+          <article
+            key={item.id}
+            className="rounded-3xl bg-white p-6 shadow-sm cursor-pointer"
+            onClick={goDetail}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                goDetail();
+              }
+            }}
+            tabIndex={0}
+            role="button"
+          >
             <div className="text-xs text-slate-500">
               {item.category} · {item.model}
             </div>
@@ -102,7 +115,7 @@ export default function FavoritePromptList({
 
             <div className="mt-4 flex flex-wrap gap-3">
               <button
-                onClick={() => handleRemoveFavorite(item.id)}
+                onClick={(e) => { e.stopPropagation(); handleRemoveFavorite(item.id); }}
                 disabled={removingId === item.id}
                 className="rounded-2xl border border-slate-200 px-4 py-2 text-sm font-medium"
               >
@@ -110,18 +123,18 @@ export default function FavoritePromptList({
               </button>
 
               <button
-                onClick={() => navigator.clipboard.writeText(item.prompt)}
+                onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(item.prompt); }}
                 className="rounded-2xl bg-slate-900 px-4 py-2 text-sm font-medium text-white"
               >
                 复制提示词
               </button>
 
-              <Link
-                href={`/prompts/${item.id}`}
+              <button
+                onClick={(e) => { e.stopPropagation(); goDetail(); }}
                 className="rounded-2xl border border-slate-200 px-4 py-2 text-sm font-medium"
               >
                 查看详情
-              </Link>
+              </button>
             </div>
           </article>
         );

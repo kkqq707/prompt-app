@@ -1,3 +1,6 @@
+"use client";
+
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 interface Post {
@@ -69,13 +72,27 @@ export default function PostCard({
   onLike,
   onFavorite,
 }: PostCardProps) {
+  const router = useRouter();
   const authorName = post.profiles?.display_name || "匿名用户";
   const timeAgo = formatTimeAgo(post.created_at);
 
   const excerpt = post.description || post.content.slice(0, 100) + "...";
 
+  const goDetail = () => router.push(`/community/posts/${post.id}`);
+
   return (
-    <article className="group flex flex-col rounded-xl border border-border bg-card p-5 shadow-sm transition-all hover:shadow-md hover:-translate-y-1">
+    <article
+      className="group flex flex-col rounded-xl border border-border bg-card p-5 shadow-sm transition-all hover:shadow-md hover:-translate-y-1 cursor-pointer"
+      onClick={goDetail}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          goDetail();
+        }
+      }}
+      tabIndex={0}
+      role="button"
+    >
       {/* Card Header */}
       <div className="mb-4 flex items-start justify-between">
         <div className="flex items-center gap-3">
@@ -113,6 +130,7 @@ export default function PostCard({
         <h3 className="mb-2 text-lg font-semibold text-card-foreground line-clamp-2">
           <Link
             href={`/community/posts/${post.id}`}
+            onClick={(e) => e.stopPropagation()}
             className="hover:text-primary"
           >
             {post.title}
@@ -148,7 +166,7 @@ export default function PostCard({
           {/* Interaction Stats */}
           <div className="flex items-center gap-4 text-sm">
             <button
-              onClick={onLike}
+              onClick={(e) => { e.stopPropagation(); onLike(); }}
               disabled={!currentUserId}
               className={`flex items-center gap-1.5 transition-all ${
                 !currentUserId
@@ -164,6 +182,7 @@ export default function PostCard({
 
             <Link
               href={`/community/posts/${post.id}#comments`}
+              onClick={(e) => e.stopPropagation()}
               className="flex items-center gap-1.5 text-muted hover:text-primary"
             >
               <span className="text-lg">💬</span>
@@ -171,7 +190,7 @@ export default function PostCard({
             </Link>
 
             <button
-              onClick={onFavorite}
+              onClick={(e) => { e.stopPropagation(); onFavorite(); }}
               disabled={!currentUserId}
               className={`flex items-center gap-1.5 transition-all ${
                 !currentUserId
@@ -188,12 +207,12 @@ export default function PostCard({
 
           {/* Action Buttons */}
           <div className="flex items-center gap-2">
-            <Link
-              href={`/community/posts/${post.id}`}
+            <button
+              onClick={(e) => { e.stopPropagation(); goDetail(); }}
               className="rounded-lg border border-border bg-white px-3 py-1.5 text-xs font-medium text-card-foreground transition-all hover:bg-surface hover:shadow-sm dark:bg-card"
             >
               查看详情
-            </Link>
+            </button>
           </div>
         </div>
       </div>
